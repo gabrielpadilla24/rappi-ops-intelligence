@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+data/*.xlsx
+data/*.csv
+.streamlit/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.DS_Store
+.claude/
