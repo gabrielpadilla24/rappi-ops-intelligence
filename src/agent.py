@@ -18,20 +18,19 @@ Funciones principales:
 """
 
 import json
-import os
 import re
 
-import google.generativeai as genai
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
+from groq import Groq
 
 from prompts.system_prompt import SYSTEM_PROMPT_TEMPLATE
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-_MODEL = "gemini-2.0-flash"
+_client = Groq()
+_MODEL = "llama-3.3-70b-versatile"
 _MAX_HISTORY_TURNS = 5  # turnos (user + assistant) a mantener en contexto
 
 
@@ -44,30 +43,24 @@ def _build_system_prompt(schema_string: str) -> str:
     return SYSTEM_PROMPT_TEMPLATE.format(schema=schema_string)
 
 
-def _format_history(chat_history: list) -> list:
-    """
-    Convierte el historial del formato interno [{"role": "user"|"assistant", "content": "..."}]
-    al formato de Gemini: [{"role": "user"|"model", "parts": "..."}].
-    """
-    formatted = []
-    for msg in chat_history:
-        role = "model" if msg["role"] == "assistant" else "user"
-        formatted.append({"role": role, "parts": msg["content"]})
-    return formatted
-
-
 def _generate_code(question: str, chat_history: list, system_prompt: str) -> dict:
     """
-    Llama a Gemini con el system prompt + historial + pregunta.
+    Llama a Groq con el system prompt + historial + pregunta.
     Retorna el dict parseado con keys: code, explanation, chart, suggestions.
     """
     recent_history = chat_history[-(2 * _MAX_HISTORY_TURNS):]
 
-    print(f"[agent] _generate_code → llamando Gemini ({_MODEL})...")
-    model = genai.GenerativeModel(_MODEL, system_instruction=system_prompt)
-    chat = model.start_chat(history=_format_history(recent_history))
-    response = chat.send_message(question)
-    raw_content = response.text.strip()
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(recent_history)
+    messages.append({"role": "user", "content": question})
+
+    print(f"[agent] _generate_code → llamando Groq ({_MODEL})...")
+    response = _client.chat.completions.create(
+        model=_MODEL,
+        messages=messages,
+        temperature=0.1,
+    )
+    raw_content = response.choices[0].message.content.strip()
 
     print(f"[agent] _generate_code → respuesta recibida ({len(raw_content)} chars)")
     return _parse_json_response(raw_content)
@@ -158,10 +151,13 @@ def _synthesize_response(question: str, result: any, explanation: str) -> str:
         f"**Resultados:**\n{result_text}"
     )
 
-    print(f"[agent] _synthesize_response → llamando Gemini para síntesis...")
-    model = genai.GenerativeModel(_MODEL)
-    response = model.generate_content(synthesis_prompt)
-    return response.text.strip()
+    print("[agent] _synthesize_response → llamando Groq para síntesis...")
+    response = _client.chat.completions.create(
+        model=_MODEL,
+        messages=[{"role": "user", "content": synthesis_prompt}],
+        temperature=0.3,
+    )
+    return response.choices[0].message.content.strip()
 
 
 def _generate_chart_config(chart_raw: dict, result: any) -> dict | None:
