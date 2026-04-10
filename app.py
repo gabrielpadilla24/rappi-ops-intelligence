@@ -181,4 +181,66 @@ if mode == "💬 Chat":
 # ---------------------------------------------------------------------------
 
 elif mode == "📊 Insights Report":
-    st.info("🚧 Modo Insights — se implementará en la Fase 4")
+    st.title("📊 Reporte de Insights Operacionales")
+
+    if "insights_report" not in st.session_state:
+        st.session_state.insights_report = None
+
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        generate_btn = st.button("🚀 Generar Reporte", type="primary")
+
+    if generate_btn:
+        with st.spinner("🔍 Analizando datos y generando insights... (esto puede tomar 30-60 segundos)"):
+            from src.insights_engine import generate_insights_report
+            report = generate_insights_report(dataframes)
+            st.session_state.insights_report = report
+
+    if st.session_state.insights_report:
+        report = st.session_state.insights_report
+
+        # Renderizar reporte markdown
+        st.markdown(report["report_markdown"])
+
+        st.divider()
+
+        # Expanders con datos raw de cada detector
+        with st.expander("🔴 Anomalías - Datos Detallados"):
+            st.dataframe(report["anomalies"], use_container_width=True)
+
+        with st.expander("📉 Tendencias - Datos Detallados"):
+            st.dataframe(report["trends"], use_container_width=True)
+
+        with st.expander("📊 Benchmarking - Datos Detallados"):
+            st.dataframe(report["benchmarks"], use_container_width=True)
+
+        with st.expander("🔗 Correlaciones - Datos Detallados"):
+            st.dataframe(report["correlations"], use_container_width=True)
+
+        with st.expander("🟢 Oportunidades - Datos Detallados"):
+            st.dataframe(report["opportunities"], use_container_width=True)
+
+        st.divider()
+
+        # Botones de descarga
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                "⬇️ Descargar Reporte (Markdown)",
+                data=report["report_markdown"].encode(),
+                file_name="rappi_insights_report.md",
+                mime="text/markdown",
+            )
+        with col2:
+            all_insights = pd.concat([
+                report["anomalies"].assign(tipo="anomaly"),
+                report["trends"].assign(tipo="trend"),
+                report["benchmarks"].assign(tipo="benchmark"),
+                report["opportunities"].assign(tipo="opportunity"),
+            ], ignore_index=True)
+            st.download_button(
+                "⬇️ Descargar Datos (CSV)",
+                data=all_insights.to_csv(index=False).encode(),
+                file_name="rappi_insights_data.csv",
+                mime="text/csv",
+            )
