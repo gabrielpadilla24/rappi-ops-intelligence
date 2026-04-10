@@ -245,32 +245,36 @@ elif st.session_state.active_mode == "insights":
         # Botones de descarga
         from utils.export import export_to_pdf
 
-        col1, col2 = st.columns(2)
-        with col1:
+        _, dl_col1, dl_col2, _ = st.columns([1, 2, 2, 1])
+        with dl_col1:
             pdf_bytes = export_to_pdf(report["report_markdown"])
             st.download_button(
                 "⬇️ Descargar PDF",
                 data=pdf_bytes,
                 file_name="rappi_insights_report.pdf",
                 mime="application/pdf",
+                use_container_width=True,
             )
-        with col2:
+        with dl_col2:
             st.download_button(
                 "⬇️ Descargar Reporte (Markdown)",
                 data=report["report_markdown"].encode(),
                 file_name="rappi_insights_report.md",
                 mime="text/markdown",
+                use_container_width=True,
             )
 
         st.divider()
         st.subheader("📧 Enviar Reporte por Email")
 
-        with st.form("email_form"):
-            email_to = st.text_input("Dirección de email", placeholder="ejemplo@empresa.com")
-            send_btn = st.form_submit_button("📤 Enviar Email", type="primary")
+        email_col1, email_col2 = st.columns([5, 1])
+        with email_col1:
+            email_to = st.text_input("Email", placeholder="ejemplo@empresa.com", label_visibility="collapsed")
+        with email_col2:
+            send_btn = st.button("📤 Enviar", use_container_width=True, type="primary")
 
-        if send_btn:
-            if not email_to or "@" not in email_to:
+        if send_btn and email_to:
+            if "@" not in email_to:
                 st.error("Por favor ingresa un email válido")
             else:
                 from utils.email_sender import send_report
@@ -280,11 +284,10 @@ elif st.session_state.active_mode == "insights":
                     pdf_data = export_to_pdf(report["report_markdown"])
                     success, message = send_report(
                         to_email=email_to,
-                        subject="📊 Rappi Ops Intelligence - Reporte de Insights",
+                        subject="Rappi Ops Intelligence - Reporte de Insights",
                         html_body="<h2>Reporte de Insights Operacionales</h2><p>Adjunto encontrarás el reporte generado automáticamente.</p>",
                         pdf_bytes=pdf_data,
                     )
-
                 if success:
                     st.success(message)
                 else:
