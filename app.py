@@ -223,15 +223,25 @@ elif mode == "📊 Insights Report":
         st.divider()
 
         # Botones de descarga
-        col1, col2 = st.columns(2)
+        from utils.export import export_to_pdf
+
+        col1, col2, col3 = st.columns(3)
         with col1:
+            pdf_bytes = export_to_pdf(report["report_markdown"])
+            st.download_button(
+                "⬇️ Descargar PDF",
+                data=pdf_bytes,
+                file_name="rappi_insights_report.pdf",
+                mime="application/pdf",
+            )
+        with col2:
             st.download_button(
                 "⬇️ Descargar Reporte (Markdown)",
                 data=report["report_markdown"].encode(),
                 file_name="rappi_insights_report.md",
                 mime="text/markdown",
             )
-        with col2:
+        with col3:
             all_insights = pd.concat([
                 report["anomalies"].assign(tipo="anomaly"),
                 report["trends"].assign(tipo="trend"),
@@ -244,3 +254,36 @@ elif mode == "📊 Insights Report":
                 file_name="rappi_insights_data.csv",
                 mime="text/csv",
             )
+
+        st.divider()
+        st.subheader("📧 Enviar Reporte por Email")
+
+        email_col1, email_col2 = st.columns([3, 1])
+        with email_col1:
+            email_to = st.text_input("Dirección de email", placeholder="ejemplo@empresa.com")
+        with email_col2:
+            send_btn = st.button("📤 Enviar", type="primary")
+
+        if send_btn:
+            if not email_to or "@" not in email_to:
+                st.error("Por favor ingresa un email válido")
+            else:
+                from utils.email_sender import send_report
+                from utils.export import export_to_pdf
+
+                with st.spinner("Enviando email..."):
+                    pdf_data = export_to_pdf(report["report_markdown"])
+                    success, message = send_report(
+                        to_email=email_to,
+                        subject="📊 Rappi Ops Intelligence - Reporte de Insights",
+                        html_body=(
+                            "<h2>Reporte de Insights Operacionales</h2>"
+                            "<p>Adjunto encontrarás el reporte generado automáticamente.</p>"
+                        ),
+                        pdf_bytes=pdf_data,
+                    )
+
+                if success:
+                    st.success(message)
+                else:
+                    st.warning(message)
