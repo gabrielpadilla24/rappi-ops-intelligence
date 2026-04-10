@@ -1,7 +1,7 @@
 .env
 __pycache__/
 *.pyc
-data/*.xlsx
+
 data/*.csv
 .streamlit/
 venv/
