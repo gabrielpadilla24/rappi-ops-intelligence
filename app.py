@@ -267,19 +267,19 @@ elif st.session_state.active_mode == "insights":
         st.divider()
         st.subheader("📧 Enviar Reporte por Email")
 
-        email_col1, email_col2 = st.columns([5, 1])
-        with email_col1:
-            email_to = st.text_input("Email", placeholder="ejemplo@empresa.com", label_visibility="collapsed")
-        with email_col2:
-            send_btn = st.button("📤 Enviar", use_container_width=True, type="primary")
+        with st.form("email_form"):
+            email_col1, email_col2 = st.columns([5, 1])
+            with email_col1:
+                email_to = st.text_input("Email", placeholder="ejemplo@empresa.com", label_visibility="collapsed")
+            with email_col2:
+                send_btn = st.form_submit_button("📤 Enviar", use_container_width=True, type="primary")
 
-        if send_btn and email_to:
-            if "@" not in email_to:
+        if send_btn:
+            if not email_to or "@" not in email_to:
                 st.error("Por favor ingresa un email válido")
             else:
                 from utils.email_sender import send_report
                 from utils.export import export_to_pdf
-
                 with st.spinner("Enviando email..."):
                     pdf_data = export_to_pdf(report["report_markdown"])
                     success, message = send_report(
