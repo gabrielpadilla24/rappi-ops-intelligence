@@ -34,18 +34,38 @@ with st.sidebar:
     st.caption("Sistema de Análisis Inteligente")
     st.divider()
 
-    mode = st.radio(
-        "Modo",
-        options=["💬 Chat", "📊 Insights Report"],
-        index=0,
-        label_visibility="collapsed",
+    # Navegación con botones styled como tabs verticales
+    st.markdown("**Navegación**")
+
+    if "active_mode" not in st.session_state:
+        st.session_state.active_mode = "chat"
+
+    chat_btn = st.button(
+        "💬  Chat Operacional",
+        use_container_width=True,
+        type="primary" if st.session_state.active_mode == "chat" else "secondary",
+        key="nav_chat",
     )
+    insights_btn = st.button(
+        "📊  Insights Report",
+        use_container_width=True,
+        type="primary" if st.session_state.active_mode == "insights" else "secondary",
+        key="nav_insights",
+    )
+
+    if chat_btn:
+        st.session_state.active_mode = "chat"
+        st.rerun()
+    if insights_btn:
+        st.session_state.active_mode = "insights"
+        st.rerun()
 
     st.divider()
     st.markdown("**Acerca de**")
     st.caption(
-        "Powered by Gemini 2.0 Flash + Pandas. "
-        "Datos: 9 países, 964 zonas, 13 métricas operacionales."
+        "**LLM:** Groq · Llama 3.3 70B\n\n"
+        "**Stack:** Streamlit · Pandas · Plotly\n\n"
+        "**Datos:** 9 países · 964 zonas · 13 métricas"
     )
 
 # ---------------------------------------------------------------------------
@@ -106,7 +126,7 @@ def _render_assistant_message(msg: dict, msg_idx: int):
 # Mode: Chat
 # ---------------------------------------------------------------------------
 
-if mode == "💬 Chat":
+if st.session_state.active_mode == "chat":
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -180,7 +200,7 @@ if mode == "💬 Chat":
 # Mode: Insights Report
 # ---------------------------------------------------------------------------
 
-elif mode == "📊 Insights Report":
+elif st.session_state.active_mode == "insights":
     st.title("📊 Reporte de Insights Operacionales")
 
     if "insights_report" not in st.session_state:
@@ -225,7 +245,7 @@ elif mode == "📊 Insights Report":
         # Botones de descarga
         from utils.export import export_to_pdf
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
             pdf_bytes = export_to_pdf(report["report_markdown"])
             st.download_button(
@@ -241,28 +261,13 @@ elif mode == "📊 Insights Report":
                 file_name="rappi_insights_report.md",
                 mime="text/markdown",
             )
-        with col3:
-            all_insights = pd.concat([
-                report["anomalies"].assign(tipo="anomaly"),
-                report["trends"].assign(tipo="trend"),
-                report["benchmarks"].assign(tipo="benchmark"),
-                report["opportunities"].assign(tipo="opportunity"),
-            ], ignore_index=True)
-            st.download_button(
-                "⬇️ Descargar Datos (CSV)",
-                data=all_insights.to_csv(index=False).encode(),
-                file_name="rappi_insights_data.csv",
-                mime="text/csv",
-            )
 
         st.divider()
         st.subheader("📧 Enviar Reporte por Email")
 
-        email_col1, email_col2 = st.columns([3, 1])
-        with email_col1:
+        with st.form("email_form"):
             email_to = st.text_input("Dirección de email", placeholder="ejemplo@empresa.com")
-        with email_col2:
-            send_btn = st.button("📤 Enviar", type="primary")
+            send_btn = st.form_submit_button("📤 Enviar Email", type="primary")
 
         if send_btn:
             if not email_to or "@" not in email_to:
@@ -276,10 +281,7 @@ elif mode == "📊 Insights Report":
                     success, message = send_report(
                         to_email=email_to,
                         subject="📊 Rappi Ops Intelligence - Reporte de Insights",
-                        html_body=(
-                            "<h2>Reporte de Insights Operacionales</h2>"
-                            "<p>Adjunto encontrarás el reporte generado automáticamente.</p>"
-                        ),
+                        html_body="<h2>Reporte de Insights Operacionales</h2><p>Adjunto encontrarás el reporte generado automáticamente.</p>",
                         pdf_bytes=pdf_data,
                     )
 

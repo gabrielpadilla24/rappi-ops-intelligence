@@ -55,12 +55,29 @@ def _strip_markdown(text: str) -> str:
 
 
 def _to_latin1(text: str) -> str:
-    """
-    Convierte el texto a Latin-1 compatible con Helvetica:
-    - Reemplaza emojis y caracteres fuera de Latin-1 por '?'
-    - Preserva tildes y caracteres españoles (dentro de Latin-1)
-    """
-    return text.encode("latin-1", errors="replace").decode("latin-1")
+    """Remueve emojis y caracteres fuera de Latin-1, preserva tildes y ñ."""
+    # Primero reemplazar emojis comunes por texto equivalente
+    emoji_map = {
+        "📊": "",
+        "🔴": "",
+        "📉": "",
+        "🔗": "",
+        "🟢": "",
+        "📧": "",
+        "🚀": "",
+        "⬇️": "",
+        "📋": "",
+        "🤔": "",
+        "👋": "",
+        "✅": "",
+        "❌": "",
+        "⚠️": "",
+        "🔍": "",
+    }
+    for emoji, replacement in emoji_map.items():
+        text = text.replace(emoji, replacement)
+    # Remover cualquier otro caracter fuera de Latin-1 silenciosamente
+    return text.encode("latin-1", errors="ignore").decode("latin-1")
 
 
 def export_to_csv(df: pd.DataFrame) -> bytes:
